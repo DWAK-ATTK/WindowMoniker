@@ -47,10 +47,15 @@ namespace WindowMoniker {
 
 
 		private void Form1_Load(object sender, EventArgs e) {
+			this.MouseDown += Form1_MouseDown;
 			UpdateTimer.Tick += UpdateTimer_Tick;
 		}
 
-
+		private void Form1_MouseDown(object sender, MouseEventArgs e) {
+			if(Control.ModifierKeys.HasFlag(Keys.Shift)) {
+				contextMenuStrip1.Show(e.Location);
+			}
+		}
 
 		private void UpdateTimer_Tick(object sender, EventArgs e) {
 			DrawBorderMoniker();
@@ -308,7 +313,14 @@ namespace WindowMoniker {
 
 		[DllImport("kernel32.dll", EntryPoint = "SetLastError")]
 		public static extern void SetLastError(int dwErrorCode);
-#endregion
+
+
+		#endregion
+
+		private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
+			Application.Exit();
+		}
+
 
 
 
