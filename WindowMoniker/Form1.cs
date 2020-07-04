@@ -29,12 +29,19 @@ namespace WindowMoniker {
 
 #if !DEBUG
 			this.TopMost = true;
-
-			//	Remove window from Alt-Tab
-			int exStyle = (int)GetWindowLong(this.Handle, (int)GetWindowLongFields.GWL_EXSTYLE);
-			exStyle |= (int)ExtendedWindowStyles.WS_EX_TOOLWINDOW;
-			SetWindowLong(this.Handle, (int)GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
 #endif
+		}
+
+
+
+		protected override CreateParams CreateParams {
+			get {
+				var Params = base.CreateParams;
+#if !DEBUG
+				Params.ExStyle |= 0x80;
+#endif
+				return Params;
+			}
 		}
 
 
@@ -155,16 +162,28 @@ namespace WindowMoniker {
 
 
 		private void DrawDashed(Graphics g) {
-			int x = -20;
-			int y = 0;
-			int buffer = _options.Buffers.Left;
+			Buffers positions = new Buffers(0, 0, 0, 0);
+			BufferPens pens = new BufferPens(_options.Buffers * 3, _options.ForeColor);
 			int maxIndex = Math.Max(this.Width, this.Height);
 
-			for (int index = buffer; index < maxIndex; index += buffer * 3) {
-				y += buffer * 5;
+			while (positions.Left < maxIndex) {
+				positions += _options.Buffers * 6;
 
-				g.DrawLine(_options.ForePen, x, y, this.Width + 20, y);
-				g.DrawLine(_options.ForePen, y, -20, y, this.Height + 20);
+				//	Left/Right edge: only draw when below the top border and above the bottom border.
+				if (_options.Buffers.Top <= positions.Left && positions.Left <= (this.Height - (_options.Buffers.Bottom * 2))) {
+					g.DrawLine(pens.Left, 0, positions.Left, _options.Buffers.Left, positions.Left);                          //	Left
+				}
+				if (_options.Buffers.Top <= positions.Right && positions.Right <= (this.Height - (_options.Buffers.Bottom * 2))) {
+					g.DrawLine(pens.Right, this.Width - _options.Buffers.Right, positions.Right, this.Width, positions.Right);   //	Right
+				}
+
+				if (_options.Buffers.Left <= positions.Top && positions.Top <= (this.Width - (_options.Buffers.Right * 2))) {
+					g.DrawLine(pens.Top, positions.Top, 0, positions.Top, _options.Buffers.Top);
+				}
+				if (_options.Buffers.Left <= positions.Bottom && positions.Bottom <= (this.Width - (_options.Buffers.Right * 2))) {
+					g.DrawLine(pens.Bottom, positions.Bottom, this.Height - _options.Buffers.Bottom, positions.Bottom, this.Height);
+				}
+
 			}
 		}
 
@@ -187,8 +206,12 @@ namespace WindowMoniker {
 					g.DrawLine(pens.Right, this.Width - _options.Buffers.Right, positions.Right, this.Width, positions.Right);   //	Right
 				}
 
-				g.DrawLine(pens.Top, positions.Top, 0, positions.Top, _options.Buffers.Top);
-				g.DrawLine(pens.Bottom, positions.Bottom, this.Height - _options.Buffers.Bottom, positions.Bottom, this.Height);
+				if (_options.Buffers.Left <= positions.Top && positions.Top <= (this.Width - (_options.Buffers.Right * 2))) {
+					g.DrawLine(pens.Top, positions.Top, 0, positions.Top, _options.Buffers.Top);
+				}
+				if (_options.Buffers.Left <= positions.Bottom && positions.Bottom <= (this.Width - (_options.Buffers.Right * 2))) {
+					g.DrawLine(pens.Bottom, positions.Bottom, this.Height - _options.Buffers.Bottom, positions.Bottom, this.Height);
+				}
 
 			}
 		}
@@ -196,7 +219,34 @@ namespace WindowMoniker {
 
 
 		private void DrawTitle(Graphics g) {
+			if (string.IsNullOrWhiteSpace(_options.Title)) { return; }
 
+			Size titleSize = GetTitleSize(g);
+			Rectangle rectangle = new Rectangle(
+				(this.Width / 2) - (titleSize.Width / 2)-20, 0,
+				titleSize.Width+40, _options.Buffers.Top);
+			g.FillRectangle(_options.TitleBackBrush, rectangle);
+			g.DrawString(_options.Title, _options.TitleFont, _options.TitleForeBrush, rectangle.X+20, -3);
+		}
+
+
+
+		private Size GetTitleSize(Graphics g) {
+			Size result = new Size();
+
+			StringFormat stringFormat = new StringFormat(); ;
+			stringFormat.SetMeasurableCharacterRanges(new CharacterRange[] { new CharacterRange(0, _options.Title.Length) });
+
+			Region[] regions =
+				g.MeasureCharacterRanges(_options.Title, _options.TitleFont,
+					new RectangleF(0, 0, this.Width, this.Height), stringFormat);
+
+			foreach (Region region in regions) {
+				result.Width += (int)region.GetBounds(g).Width;
+			}
+			result.Height = (int)regions[0].GetBounds(g).Height;
+
+			return result;
 		}
 
 
@@ -205,7 +255,7 @@ namespace WindowMoniker {
 
 
 
-		#region Window styles
+#region Window styles
 		[Flags]
 		public enum ExtendedWindowStyles {
 			// ...
@@ -258,7 +308,7 @@ namespace WindowMoniker {
 
 		[DllImport("kernel32.dll", EntryPoint = "SetLastError")]
 		public static extern void SetLastError(int dwErrorCode);
-		#endregion
+#endregion
 
 
 

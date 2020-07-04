@@ -47,6 +47,7 @@ namespace WindowMoniker {
 			if (!string.IsNullOrWhiteSpace(value)) {
 				TitleFontSize = float.Parse(value);
 			}
+			TitleFont= new Font("Arial", TitleFontSize, FontStyle.Regular);
 
 			value = ConfigurationManager.AppSettings["TitleForeColor"];
 			if (!string.IsNullOrWhiteSpace(value)) {
@@ -113,6 +114,8 @@ namespace WindowMoniker {
 		public string Title { get; set; } = string.Empty;
 
 		public float TitleFontSize { get; set; } = 8.0f;
+
+		public Font TitleFont { get; set; } = new Font("Arial", 8.0f, FontStyle.Regular);
 
 		public Color TitleForeColor { get; set; } = Color.White;
 
